@@ -34,8 +34,8 @@ Bloodframe is not a Vulkan layer and has no config file: the host decides everyt
   previous engine (the fork's DXBC translation path) had on this GPU: 10-40% of generated frames showed the picture
   doubled and shifted. With FP16 off, which then ran the translated DXBC, the ghosting came back (confirmed
   2026-10-17), so the translation was the cause. Since then full precision also runs the dll's own FP32 SPIR-V
-  and translates DXBC only as the last resort; **not yet tested on the N5**. On a PC the 52 FP32 modules validate
-  and build as compute pipelines (RADV, NVIDIA), but that says nothing about the picture on Adreno.
+  and translates DXBC only as the last resort: tested on the N5 with FP16 off (2026-10-17), no ghosting. Both
+  precisions are clean there now.
 
 ## Credits and licence
 
