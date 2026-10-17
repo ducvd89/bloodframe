@@ -150,3 +150,26 @@ std::vector<uint8_t> Extract::getShader(const std::string& name) {
 
     return sit->second;
 }
+
+std::vector<std::string> Extract::getShaderNames() {
+    std::vector<std::string> names;
+    names.reserve(nameIdxTable.size());
+    for (const auto& entry : nameIdxTable)
+        names.push_back(entry.first);
+    std::sort(names.begin(), names.end());
+    return names;
+}
+
+uint32_t Extract::getShaderId(const std::string& name) {
+    const auto hit = nameIdxTable.find(name);
+    return hit == nameIdxTable.end() ? 0 : hit->second;
+}
+
+std::vector<uint8_t> Extract::getResource(uint32_t id) {
+    std::lock_guard lock(shadersMutex());
+    if (shaders().empty())
+        throw std::runtime_error("Shaders are not loaded.");
+
+    const auto hit = shaders().find(id);
+    return hit == shaders().end() ? std::vector<uint8_t>{} : hit->second;
+}
