@@ -89,7 +89,7 @@ namespace {
         return 0;
     }
 
-    // bbport: the one Lossless.dll the host names (setDllPath); no search of Steam or Wine folders.
+    // bloodframe: the one Lossless.dll the host names (setDllPath); no search of Steam or Wine folders.
     std::string& dllPathStorage() {
         static std::string path;
         return path;

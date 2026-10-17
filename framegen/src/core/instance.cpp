@@ -21,7 +21,7 @@ namespace {
 
 std::mutex privateInstanceEnvironmentMutex;
 
-// bbport: the host's own vkGetInstanceProcAddr (setInstanceProcAddr); null: volk's own loader.
+// bloodframe: the host's own vkGetInstanceProcAddr (setInstanceProcAddr); null: volk's own loader.
 std::atomic<PFN_vkGetInstanceProcAddr> hostGetInstanceProcAddr{nullptr};
 
 std::optional<std::string> readEnvironment(const char* name) {
@@ -119,7 +119,7 @@ void LSFG::setInstanceProcAddr(PFN_vkGetInstanceProcAddr getInstanceProcAddr) {
 }
 
 Instance::Instance() {
-    // bbport: the host process loaded its Vulkan driver itself (no Android loader, no layers): the
+    // bloodframe: the host process loaded its Vulkan driver itself (no Android loader, no layers): the
     // framegen device is made through the same entry point, so it runs on that driver.
     const PFN_vkGetInstanceProcAddr hostGipa = hostGetInstanceProcAddr.load();
     if (hostGipa != nullptr) {

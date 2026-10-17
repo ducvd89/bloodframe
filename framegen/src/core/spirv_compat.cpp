@@ -174,7 +174,7 @@ SpirvCompatibilityResult prepareSpirvForTarget(
         return result;
     }
     result.sourceVersion = words[1];
-    // bbport: modules older than the target (the half-precision shaders of the Lossless.dll are 1.0)
+    // bloodframe: modules older than the target (the half-precision shaders of the Lossless.dll are 1.0)
     // need no change: every Vulkan 1.1+ device takes 1.0 up to its own target.
     if (result.sourceVersion < kSpirv10 || result.sourceVersion > kSpirv16) {
         result.rejectionReason =

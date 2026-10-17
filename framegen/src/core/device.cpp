@@ -24,7 +24,7 @@ using namespace LSFG::Core;
 
 namespace {
 
-// bbport: setShaderFloat16Requested(); the feature is enabled when requested and the GPU has it.
+// bloodframe: setShaderFloat16Requested(); the feature is enabled when requested and the GPU has it.
 std::atomic<bool> shaderFloat16Requested{true};
 
 bool hasExtension(const std::vector<VkExtensionProperties>& extensions, const char* name) {
@@ -380,7 +380,7 @@ Device::Device(const Instance& instance, const LSFG::DeviceIdentity& requestedId
         this->diagnostics.spirvTargetVersion;
     this->diagnostics.supportDecision.synchronizationPath =
         this->diagnostics.synchronizationPath;
-    // bbport: the feature is enabled, not only there (setShaderFloat16Requested).
+    // bloodframe: the feature is enabled, not only there (setShaderFloat16Requested).
     const bool enableFloat16 = caps.shaderFloat16 && shaderFloat16Requested.load();
     this->diagnostics.supportDecision.fp16 = enableFloat16;
     this->diagnostics.driverVersion = properties.driverVersion;

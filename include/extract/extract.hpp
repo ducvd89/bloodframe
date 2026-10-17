@@ -6,7 +6,7 @@
 
 namespace Extract {
 
-    /// bbport: the Lossless.dll to read the shaders from (no folder search).
+    /// bloodframe: the Lossless.dll to read the shaders from (no folder search).
     void setDllPath(const std::string& path);
 
     ///
@@ -27,19 +27,19 @@ namespace Extract {
     std::vector<uint8_t> getShader(const std::string& name);
 
     ///
-    /// bbport: the names of all shaders the framegen asks for.
+    /// bloodframe: the names of all shaders the framegen asks for.
     ///
     std::vector<std::string> getShaderNames();
 
     ///
-    /// bbport: the Lossless.dll resource id of a shader (the id of its DXBC resource).
+    /// bloodframe: the Lossless.dll resource id of a shader (the id of its DXBC resource).
     ///
     /// @return The id, or 0 for an unknown name.
     ///
     uint32_t getShaderId(const std::string& name);
 
     ///
-    /// bbport: the bytes of any RCDATA resource of the loaded Lossless.dll.
+    /// bloodframe: the bytes of any RCDATA resource of the loaded Lossless.dll.
     ///
     /// @return The resource, or an empty vector when the dll has none with that id.
     ///

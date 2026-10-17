@@ -112,11 +112,11 @@ struct BackendDiagnostics {
     bool externalSemaphoreSyncFd{false};
 };
 
-/// bbport: makes the framegen Vulkan instance through the host process's own vkGetInstanceProcAddr
+/// bloodframe: makes the framegen Vulkan instance through the host process's own vkGetInstanceProcAddr
 /// (volkInitializeCustom) instead of the system loader. Call before the first initialize().
 void setInstanceProcAddr(PFN_vkGetInstanceProcAddr getInstanceProcAddr);
 
-/// bbport: whether the framegen device enables the shaderFloat16 feature when the GPU has it (the
+/// bloodframe: whether the framegen device enables the shaderFloat16 feature when the GPU has it (the
 /// half-precision shaders need it; default: yes). Call before the first initialize().
 void setShaderFloat16Requested(bool requested);
 
