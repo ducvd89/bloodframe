@@ -23,6 +23,15 @@ generated frames back as `AHardwareBuffer`s with sync files, so the host keeps i
 
 Bloodframe is not a Vulkan layer and has no config file: the host decides everything through the C API.
 
+## Tested on
+
+- **AYN Thor** (Snapdragon 8 Gen 2, Adreno 740, Turnip 26.3.0): FP16 runs; 2x at about 34 real + 34 generated
+  frames/s in Bloodborne's Central Yharnam.
+- **Oppo Find N5** (Snapdragon 8 Elite, Adreno 830, Turnip Gen8): FP16 runs, and it fixed a ghosting bug that the
+  previous engine (the fork's DXBC translation path) had on this GPU: 10-40% of generated frames showed the picture
+  doubled and shifted. Most likely the translated shaders were the cause, since FP16 runs the dll's own SPIR-V;
+  whether full precision (which still translates DXBC) ghosts there has not been checked yet.
+
 ## Credits and licence
 
 Bloodframe is based on **lsfg-vk 1.0 by PancakeTAS** (MIT), via **GameNative's Android fork by Ragnarok93**
