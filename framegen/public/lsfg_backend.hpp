@@ -112,6 +112,10 @@ struct BackendDiagnostics {
     bool externalSemaphoreSyncFd{false};
 };
 
+/// bbport: makes the framegen Vulkan instance through the host process's own vkGetInstanceProcAddr
+/// (volkInitializeCustom) instead of the system loader. Call before the first initialize().
+void setInstanceProcAddr(PFN_vkGetInstanceProcAddr getInstanceProcAddr);
+
 inline constexpr uint64_t DEFAULT_DRIVER_WAIT_TIMEOUT_NS = 500'000'000ULL;
 
 } // namespace LSFG

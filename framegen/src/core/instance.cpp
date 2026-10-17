@@ -3,8 +3,10 @@
 
 #include "core/instance.hpp"
 #include "common/exception.hpp"
+#include "lsfg_backend.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
@@ -18,6 +20,9 @@ using namespace LSFG::Core;
 namespace {
 
 std::mutex privateInstanceEnvironmentMutex;
+
+// bbport: the host's own vkGetInstanceProcAddr (setInstanceProcAddr); null: volk's own loader.
+std::atomic<PFN_vkGetInstanceProcAddr> hostGetInstanceProcAddr{nullptr};
 
 std::optional<std::string> readEnvironment(const char* name) {
     const char* value = std::getenv(name);
@@ -109,8 +114,20 @@ private:
 
 } // namespace
 
+void LSFG::setInstanceProcAddr(PFN_vkGetInstanceProcAddr getInstanceProcAddr) {
+    hostGetInstanceProcAddr.store(getInstanceProcAddr);
+}
+
 Instance::Instance() {
-    if (volkInitialize() != VK_SUCCESS)
+    // bbport: the host process loaded its Vulkan driver itself (no Android loader, no layers): the
+    // framegen device is made through the same entry point, so it runs on that driver.
+    const PFN_vkGetInstanceProcAddr hostGipa = hostGetInstanceProcAddr.load();
+    if (hostGipa != nullptr) {
+        volkInitializeCustom(hostGipa);
+        if (vkCreateInstance == nullptr)
+            throw LSFG::vulkan_error(VK_ERROR_INITIALIZATION_FAILED,
+                "The host's Vulkan entry point has no vkCreateInstance");
+    } else if (volkInitialize() != VK_SUCCESS)
         throw LSFG::vulkan_error(VK_ERROR_INITIALIZATION_FAILED, "Failed to initialize Vulkan loader");
 
     uint32_t loaderVersion = VK_API_VERSION_1_0;
@@ -136,7 +153,10 @@ Instance::Instance() {
     };
     VkInstance instanceHandle{};
     VkResult res = VK_ERROR_INITIALIZATION_FAILED;
-    {
+    if (hostGipa != nullptr) {
+        // No layer can be loaded (and setenv is not thread safe in a host with other threads).
+        res = vkCreateInstance(&createInfo, nullptr, &instanceHandle);
+    } else {
         ScopedPrivateInstanceLayerSuppression suppressRecursiveLsfgLayer;
         res = vkCreateInstance(&createInfo, nullptr, &instanceHandle);
     }
