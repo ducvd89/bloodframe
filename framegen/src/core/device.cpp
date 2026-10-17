@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
@@ -22,6 +23,9 @@
 using namespace LSFG::Core;
 
 namespace {
+
+// bbport: setShaderFloat16Requested(); the feature is enabled when requested and the GPU has it.
+std::atomic<bool> shaderFloat16Requested{true};
 
 bool hasExtension(const std::vector<VkExtensionProperties>& extensions, const char* name) {
     for (const auto& extension : extensions)
@@ -174,6 +178,10 @@ void logFramegenExternalSemaphoreProbe(
 
 const Image& Device::getFallbackDescriptorImage() const {
     return *this->fallbackDescriptorImage;
+}
+
+void LSFG::setShaderFloat16Requested(bool requested) {
+    shaderFloat16Requested.store(requested);
 }
 
 Device::Device(const Instance& instance, const LSFG::DeviceIdentity& requestedIdentity,
@@ -372,7 +380,9 @@ Device::Device(const Instance& instance, const LSFG::DeviceIdentity& requestedId
         this->diagnostics.spirvTargetVersion;
     this->diagnostics.supportDecision.synchronizationPath =
         this->diagnostics.synchronizationPath;
-    this->diagnostics.supportDecision.fp16 = caps.shaderFloat16;
+    // bbport: the feature is enabled, not only there (setShaderFloat16Requested).
+    const bool enableFloat16 = caps.shaderFloat16 && shaderFloat16Requested.load();
+    this->diagnostics.supportDecision.fp16 = enableFloat16;
     this->diagnostics.driverVersion = properties.driverVersion;
     this->diagnostics.driverId = hasDriverProperties
         ? driverProperties.driverID
@@ -479,7 +489,7 @@ Device::Device(const Instance& instance, const LSFG::DeviceIdentity& requestedId
 #endif
     if (decision.synchronizationPath == SynchronizationPath::KhrSync2)
         enabledExtensions.push_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
-    if (!api12 && caps.shaderFloat16)
+    if (!api12 && enableFloat16)
         enabledExtensions.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
     if (decision.vulkanPath == VulkanPath::Vulkan11Extensions) {
         enabledExtensions.push_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
@@ -527,13 +537,13 @@ Device::Device(const Instance& instance, const LSFG::DeviceIdentity& requestedId
     };
     VkPhysicalDeviceVulkan12Features features12Enable{
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-        .shaderFloat16 = api12 && caps.shaderFloat16 ? VK_TRUE : VK_FALSE,
+        .shaderFloat16 = api12 && enableFloat16 ? VK_TRUE : VK_FALSE,
         .timelineSemaphore = VK_FALSE,
         .vulkanMemoryModel = api12 ? features12Probe.vulkanMemoryModel : VK_FALSE,
     };
     VkPhysicalDeviceShaderFloat16Int8FeaturesKHR float16Enable{
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES_KHR,
-        .shaderFloat16 = !api12 && caps.shaderFloat16 ? VK_TRUE : VK_FALSE,
+        .shaderFloat16 = !api12 && enableFloat16 ? VK_TRUE : VK_FALSE,
     };
     VkPhysicalDeviceVulkanMemoryModelFeaturesKHR memoryModelEnable{
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES_KHR,
@@ -556,7 +566,7 @@ Device::Device(const Instance& instance, const LSFG::DeviceIdentity& requestedId
         features12Enable.pNext = enableHead;
         enableHead = &features12Enable;
     } else {
-        if (caps.shaderFloat16) {
+        if (enableFloat16) {
             float16Enable.pNext = enableHead;
             enableHead = &float16Enable;
         }

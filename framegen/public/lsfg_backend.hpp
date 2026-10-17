@@ -116,6 +116,10 @@ struct BackendDiagnostics {
 /// (volkInitializeCustom) instead of the system loader. Call before the first initialize().
 void setInstanceProcAddr(PFN_vkGetInstanceProcAddr getInstanceProcAddr);
 
+/// bbport: whether the framegen device enables the shaderFloat16 feature when the GPU has it (the
+/// half-precision shaders need it; default: yes). Call before the first initialize().
+void setShaderFloat16Requested(bool requested);
+
 inline constexpr uint64_t DEFAULT_DRIVER_WAIT_TIMEOUT_NS = 500'000'000ULL;
 
 } // namespace LSFG
