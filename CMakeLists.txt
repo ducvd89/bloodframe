@@ -1,5 +1,14 @@
 cmake_minimum_required(VERSION 3.10)
 
+# Bloodframe (libbloodframe.so, Android): only that target, nothing of the layer below. See android/ and
+# build-android.sh.
+option(BLOODFRAME "Build only Bloodframe, the single libbloodframe.so (Android NDK)" OFF)
+if(BLOODFRAME)
+    project(bloodframe LANGUAGES C CXX)
+    add_subdirectory(android)
+    return()
+endif()
+
 # Android / Wine-on-Android target (for GameNative emulator).
 # When ON: builds liblsfg-vk.so for the NDK toolchain, skips the GTK4 UI,
 # and defines LSFGVK_ANDROID_WINE=1 for the C++ code.
