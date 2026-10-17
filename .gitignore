@@ -12,3 +12,15 @@
 /.ccls
 
 build-android/
+# Bloodframe: build outputs, never shaders or the Lossless.dll
+/out/
+/build*/
+*.so
+*.o
+*.a
+*.log
+Lossless.dll
+*.dll
+*.spv
+*.dxbc
+*.cache
