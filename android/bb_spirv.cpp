@@ -1,5 +1,5 @@
-// Bloodframe: see bb_half.hpp.
-#include "bb_half.hpp"
+// Bloodframe: see bb_spirv.hpp.
+#include "bb_spirv.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -12,12 +12,13 @@
 
 #include "extract/extract.hpp"
 
-namespace BbHalf {
+namespace BbSpirv {
 
 namespace {
 
-// The half-precision module of a shader is the shader's DXBC resource id plus this.
-constexpr uint32_t ResourceOffset = 49;
+// The module of a shader is the shader's DXBC resource id plus this: half precision N + 49, full N + 98.
+constexpr uint32_t ResourceOffsetHalf = 49;
+constexpr uint32_t ResourceOffsetFull = 98;
 
 constexpr uint32_t SpirvMagic = 0x07230203u;
 constexpr uint32_t SpirvMaxVersion = 0x00010600u;
@@ -29,26 +30,34 @@ constexpr uint32_t OpDecorate = 71;
 constexpr uint32_t DecorationBinding = 33;
 constexpr uint32_t DecorationDescriptorSet = 34;
 
-// The capabilities the half-precision modules may use. Of these the framegen's device already has to
-// have all but Float16 (its capability check refuses a GPU without the storage image features), and
-// Float16 is the one feature enabled on request (LSFG::setShaderFloat16Requested). Anything else, such
-// as 16-bit storage or Int16, is a module this build was not checked against: full precision then.
+// The capabilities the modules may use. Of these the framegen's device already has to have all but
+// Float16 (its capability check refuses a GPU without the storage image features), and Float16 is the one
+// feature enabled on request (LSFG::setShaderFloat16Requested): only the half-precision set may use it.
+// Anything else, such as 16-bit storage or Int16, is a module this build was not checked against.
+constexpr uint32_t CapabilityFloat16 = 9;
 const std::map<uint32_t, const char*> AllowedCapabilities{
     {1, "Shader"},
-    {9, "Float16"},
+    {CapabilityFloat16, "Float16"},
     {49, "StorageImageExtendedFormats"},
     {50, "ImageQuery"},
     {56, "StorageImageWriteWithoutFormat"},
 };
 
-std::unordered_map<std::string, std::vector<uint8_t>> g_modules;
-std::set<uint32_t> g_capabilities;
+struct Prepared {
+    std::unordered_map<std::string, std::vector<uint8_t>> modules;
+    std::set<uint32_t> capabilities;
+};
+Prepared g_sets[2]; // by Set
+
+Prepared& of(Set set) {
+    return g_sets[set == Set::Half ? 0 : 1];
+}
 
 // The dll numbers the bindings by resource class (constants 0, samplers 16, sampled images 32,
 // storage images 48): the descriptor layouts of the framegen are consecutive from 0 in the same
 // order, so each binding becomes its rank among the module's bindings (what the DXBC translation
 // does too).
-std::string Renumber(std::vector<uint32_t>& words, std::set<uint32_t>& capabilities) {
+std::string Renumber(Set set, std::vector<uint32_t>& words, std::set<uint32_t>& capabilities) {
     std::vector<std::pair<uint32_t, size_t>> bindings; // value, index of the value word
     size_t at = HeaderWords;
     while (at < words.size()) {
@@ -62,7 +71,8 @@ std::string Renumber(std::vector<uint32_t>& words, std::set<uint32_t>& capabilit
         }
         if (opcode == OpCapability && count >= 2) {
             const uint32_t capability = words[at + 1];
-            if (AllowedCapabilities.count(capability) == 0) {
+            if (AllowedCapabilities.count(capability) == 0 ||
+                (capability == CapabilityFloat16 && set != Set::Half)) {
                 return "a module needs SPIR-V capability " + std::to_string(capability);
             }
             capabilities.insert(capability);
@@ -89,52 +99,59 @@ std::string Renumber(std::vector<uint32_t>& words, std::set<uint32_t>& capabilit
 
 } // namespace
 
-std::string Prepare() {
-    g_modules.clear();
-    g_capabilities.clear();
+const char* Name(Set set) {
+    return set == Set::Half ? "FP16" : "FP32";
+}
+
+std::string Prepare(Set set) {
+    Prepared& out = of(set);
+    out.modules.clear();
+    out.capabilities.clear();
+    const uint32_t offset = set == Set::Half ? ResourceOffsetHalf : ResourceOffsetFull;
+    const std::string precision = set == Set::Half ? "half-precision" : "full-precision";
     for (const std::string& name : Extract::getShaderNames()) {
-        const uint32_t dxbc_id = Extract::getShaderId(name);
-        const uint32_t id = dxbc_id + ResourceOffset;
+        const uint32_t id = Extract::getShaderId(name) + offset;
         const std::vector<uint8_t> bytes = Extract::getResource(id);
         const std::string what = name + " (resource " + std::to_string(id) + ")";
         if (bytes.size() < HeaderWords * 4 || bytes.size() % 4 != 0) {
-            g_modules.clear();
-            return "this Lossless.dll has no half-precision shader for " + what;
+            out.modules.clear();
+            return "this Lossless.dll has no " + precision + " SPIR-V shader for " + what;
         }
         std::vector<uint32_t> words(bytes.size() / 4);
         std::memcpy(words.data(), bytes.data(), bytes.size());
         if (words[0] != SpirvMagic || words[1] > SpirvMaxVersion) {
-            g_modules.clear();
-            return "the half-precision shader " + what + " is not SPIR-V this build knows";
+            out.modules.clear();
+            return "the " + precision + " shader " + what + " is not SPIR-V this build knows";
         }
         std::set<uint32_t> capabilities;
-        const std::string why = Renumber(words, capabilities);
+        const std::string why = Renumber(set, words, capabilities);
         if (!why.empty()) {
-            g_modules.clear();
+            out.modules.clear();
             return why + ": " + what;
         }
-        g_capabilities.insert(capabilities.begin(), capabilities.end());
+        out.capabilities.insert(capabilities.begin(), capabilities.end());
         std::vector<uint8_t> module(bytes.size());
         std::memcpy(module.data(), words.data(), module.size());
-        g_modules.emplace(name, std::move(module));
+        out.modules.emplace(name, std::move(module));
     }
     return {};
 }
 
-std::vector<uint8_t> Get(const std::string& name) {
-    const auto hit = g_modules.find(name);
-    if (hit == g_modules.end()) {
-        throw std::runtime_error("No half-precision shader: " + name);
+std::vector<uint8_t> Get(Set set, const std::string& name) {
+    const Prepared& in = of(set);
+    const auto hit = in.modules.find(name);
+    if (hit == in.modules.end()) {
+        throw std::runtime_error(std::string("No ") + Name(set) + " SPIR-V shader: " + name);
     }
     return hit->second;
 }
 
-std::string Capabilities() {
+std::string Capabilities(Set set) {
     std::string text;
-    for (const uint32_t capability : g_capabilities) {
+    for (const uint32_t capability : of(set).capabilities) {
         text += (text.empty() ? "" : " ") + std::string(AllowedCapabilities.at(capability));
     }
     return text;
 }
 
-} // namespace BbHalf
+} // namespace BbSpirv

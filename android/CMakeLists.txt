@@ -41,7 +41,7 @@ target_compile_options(lsfg-vk-framegen PRIVATE -include unistd.h)
 
 add_library(bloodframe SHARED
   bb_lsfg.cpp
-  bb_half.cpp
+  bb_spirv.cpp
   ${LSFG_SRC}/src/extract/extract.cpp
   ${LSFG_SRC}/src/extract/trans.cpp)
 set_target_properties(bloodframe PROPERTIES

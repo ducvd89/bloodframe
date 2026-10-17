@@ -9,16 +9,19 @@ generated frames back as `AHardwareBuffer`s with sync files, so the host keeps i
   your own copy of Lossless Scaling (Steam, app 993090). The path is given by the host
   (`BbLsfgConfig.dll_path`). **No shaders and no `Lossless.dll` are included in this repository or in its
   builds.**
-- **Half precision.** When the `Lossless.dll` carries the half-precision (FP16) shader set and the GPU has
-  `shaderFloat16`, Bloodframe runs those shaders (faster on mobile GPUs). If either is missing, or the
-  driver rejects a half-precision shader, it falls back to the full-precision (FP32) shaders for the rest
-  of the process. `bb_lsfg_precision()` says what runs and why.
+- **Shader sets.** The `Lossless.dll` holds every shader three times: as DXBC, as SPIR-V for half
+  precision (FP16) and as SPIR-V for full precision (FP32). Bloodframe runs the dll's own SPIR-V and
+  translates DXBC only as the last resort. In order: **FP16 SPIR-V** (the host asked for it, the dll has the set
+  and the GPU has `shaderFloat16`), then **FP32 SPIR-V**, then **DXBC (translated)** (an old dll without the
+  SPIR-V sets, a module that fails the checks, or a driver that rejects a set at the first context). The
+  fallback holds for the rest of the process. `bb_lsfg_shader_set()` says which set runs and why (and the
+  library logs it once: `Bloodframe: shaders FP32 SPIR-V (...)`); `bb_lsfg_precision()` says half or full.
 - **Same driver as the host.** Bloodframe makes its own `VkInstance` and `VkDevice` through the host's own
   `vkGetInstanceProcAddr`, on the host's physical device, so it runs on the very driver the process loaded
   (for example a user-supplied Turnip).
 - **C API.** `android/bb_lsfg.h` is the whole interface: `bb_lsfg_init`, `bb_lsfg_create_context`,
-  `bb_lsfg_present`, `bb_lsfg_wait`, `bb_lsfg_destroy_context`, `bb_lsfg_shutdown`, `bb_lsfg_precision`,
-  `bb_lsfg_diagnostics`. Only these `bb_lsfg_*` symbols are exported (`android/bb_lsfg.map`). Nothing
+  `bb_lsfg_present`, `bb_lsfg_wait`, `bb_lsfg_destroy_context`, `bb_lsfg_shutdown`, `bb_lsfg_shader_set`,
+  `bb_lsfg_precision`, `bb_lsfg_diagnostics`. Only these `bb_lsfg_*` symbols are exported (`android/bb_lsfg.map`). Nothing
   throws; failures return -1 and write a message into the `err` buffer.
 
 Bloodframe is not a Vulkan layer and has no config file: the host decides everything through the C API.
@@ -29,8 +32,10 @@ Bloodframe is not a Vulkan layer and has no config file: the host decides everyt
   frames/s in Bloodborne's Central Yharnam.
 - **Oppo Find N5** (Snapdragon 8 Elite, Adreno 830, Turnip Gen8): FP16 runs, and it fixed a ghosting bug that the
   previous engine (the fork's DXBC translation path) had on this GPU: 10-40% of generated frames showed the picture
-  doubled and shifted. Most likely the translated shaders were the cause, since FP16 runs the dll's own SPIR-V;
-  whether full precision (which still translates DXBC) ghosts there has not been checked yet.
+  doubled and shifted. With FP16 off, which then ran the translated DXBC, the ghosting came back (confirmed
+  2026-10-17), so the translation was the cause. Since then full precision also runs the dll's own FP32 SPIR-V
+  and translates DXBC only as the last resort; **not yet tested on the N5**. On a PC the 52 FP32 modules validate
+  and build as compute pipelines (RADV, NVIDIA), but that says nothing about the picture on Adreno.
 
 ## Credits and licence
 
@@ -50,7 +55,7 @@ name of THS's product, used here only to say which frame generation the library 
 
 ## What was changed from the Android fork
 
-- `android/`: the C API (`bb_lsfg.cpp`, `bb_lsfg.h`), the half-precision SPIR-V set (`bb_half.cpp`) and the
+- `android/`: the C API (`bb_lsfg.cpp`, `bb_lsfg.h`), the SPIR-V shader sets of the dll (`bb_spirv.cpp`: half and full precision) and the
   CMake target `bloodframe`, which builds the framegen backend, the `Lossless.dll` shader extraction and
   dxbc/pe-parse/volk into one library. The fork's Vulkan layer, toml11 and UI are not built.
 - `framegen/`: the Vulkan instance can come from the host's `vkGetInstanceProcAddr`; SPIR-V 1.0 modules are
