@@ -6,6 +6,9 @@
 
 namespace Extract {
 
+    /// bbport: the Lossless.dll to read the shaders from (no folder search).
+    void setDllPath(const std::string& path);
+
     ///
     /// Extract all known shaders.
     ///
