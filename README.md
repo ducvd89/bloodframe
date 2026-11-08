@@ -45,7 +45,7 @@ fork's history: the commits up to `0802cd3` are theirs, the commits after it are
 fork's original README is kept as `README.lsfg-vk-android.md`.
 
 `LICENSE.md` is the fork's MIT licence, with a copyright line added for Bloodframe's changes (also MIT).
-Linked into `libbloodframe.so`: [dxbc](https://github.com/PancakeTAS/dxbc) (PancakeTAS),
+Linked into `libbloodframe.so`: dxbc (PancakeTAS, from DXVK; vendored in `thirdparty/dxbc` at its commit 78ab59a, as its repository was deleted),
 [pe-parse](https://github.com/trailofbits/pe-parse) (Trail of Bits) and [volk](https://github.com/zeux/volk)
 (Arseny Kapoulkine), each under its own licence; `build-android.sh` copies those licences next to the
 library (`out/licenses/`) and they must ship with it.
@@ -79,5 +79,5 @@ Results: `out/lib/libbloodframe.so` (stripped of debug info, `c++_shared` STL, s
 from the NDK with it) and the licences in `out/licenses/`.
 
 With CMake directly: `cmake -S . -B build -G Ninja -DBLOODFRAME=ON -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-30 -DANDROID_STL=c++_shared -DCMAKE_BUILD_TYPE=Release`
-and build the target `bloodframe`. (The submodules `thirdparty/dxbc`, `pe-parse` and `volk` must be checked
-out; `build-android.sh` does that.)
+and build the target `bloodframe`. (The submodules `thirdparty/pe-parse` and `volk` must be checked
+out; `build-android.sh` does that. dxbc is part of the repository.)

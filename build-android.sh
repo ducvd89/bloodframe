@@ -11,7 +11,7 @@
 #   --build-dir  the CMake build tree (default DIR/bloodframe-build)
 #   --jobs       parallel jobs (default: the number of CPUs)
 #
-# Needs git (submodules: dxbc, pe-parse, volk), cmake >= 3.18 and ninja. Run it under `nice` if the
+# Needs git (submodules: pe-parse, volk; dxbc is vendored in thirdparty/dxbc), cmake >= 3.18 and ninja. Run it under `nice` if the
 # machine should stay responsive. The shaders are not part of the build: they come from the user's own
 # Lossless.dll at run time.
 set -euo pipefail
@@ -48,8 +48,9 @@ fi
 llvm=$ndk/toolchains/llvm/prebuilt/linux-x86_64
 [[ -d $llvm ]] || { echo "The NDK has no linux-x86_64 toolchain: $llvm" >&2; exit 1; }
 
-# The fork's submodules; toml11 (the layer's config parser) is not used.
-git submodule update -q --init -- thirdparty/dxbc thirdparty/pe-parse thirdparty/volk
+# The fork's submodules; toml11 (the layer's config parser) is not used. dxbc is vendored: its upstream
+# repository (PancakeTAS/dxbc) was deleted.
+git submodule update -q --init -- thirdparty/pe-parse thirdparty/volk
 
 mkdir -p "$out/lib" "$out/licenses"
 if [[ ! -f $build/build.ninja ]]; then
